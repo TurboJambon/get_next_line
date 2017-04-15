@@ -11,49 +11,32 @@
 /* ************************************************************************** */
 
 #include "get_next_line.h"
-
-static char		*ft_strjoin_gnl(char *s1, char *s2)
+ 
+int	get_next_line(int const fd, char **line)
 {
-	char	*tmp;
-	size_t	size;
-
-	if (s1 == NULL || s2 == NULL)
-		return (NULL);
-	size = ft_strlen(s1) + ft_strlen(s2);
-	if (!(tmp = (char *)malloc(sizeof(*tmp) * (size + 2))))
-		return (NULL);
-	ft_strcpy(tmp, s1);
-	ft_strcat(tmp, s2);
-	tmp[size + 1] = '\0';
-	free(s1);
-	return (tmp);
-}
-
-int				get_next_line(const int fd, char **line)
-{
-	static char		*rest[OPEN_MAX];
-	t_gnl			gnl;
-	int				ret;
-
-	ret = 1;
-	if (fd < 0)
-		return (-1);
-	if (rest[fd] == NULL)
-		rest[fd] = ft_strnew(0);
-	while (ret != -1)
-	{
-		if ((gnl.tmp = ft_strchr(rest[fd], '\n')) ||
-				((gnl.tmp = ft_strchr(rest[fd], '\0')) && !ret))
-		{
-			*(gnl.tmp) = '\0';
-			*line = ft_strdup(rest[fd]);
-			ft_memmove(rest[fd], gnl.tmp + 1, ft_strlen(gnl.tmp + 1) + 1);
-			return (**line || (!**line && ret));
-		}
-		if ((ret = read(fd, gnl.buf, BUFF_SIZE)) == -1)
-			return (-1);
-		gnl.buf[ret] = '\0';
-		rest[fd] = ft_strjoin_gnl(rest[fd], gnl.buf);
-	}
-	return (-1);
+    static char     *save[OPEN_MAX];
+    t_gnl           gnl;
+ 
+    if (!line || fd < 0 || !BUFF_SIZE || fd > OPEN_MAX)
+        return (-1);
+    gnl.ret = 1;
+    if (!save[fd])
+        save[fd] = ft_strnew(0);
+    while (gnl.ret > -1)
+    {
+        if ((gnl.tmp = ft_strchr(save[fd], END_LINE)) ||
+                ((gnl.tmp = ft_strchr(save[fd], END_STR)) && !gnl.ret))
+        {
+            *(gnl.tmp) = END_STR;
+            *line = ft_strdup(save[fd]);
+            ft_memmove(save[fd], gnl.tmp + 1, ft_strlen(gnl.tmp + 1) + 1);
+            save[fd] = (!gnl.ret) ? NULL : save[fd];
+            return (line[0][0] || (!line[0][0] && gnl.ret > 0));
+        }
+        if ((gnl.ret = read(fd, gnl.buff, BUFF_SIZE)) == -1)
+            return (-1);
+        gnl.buff[gnl.ret] = END_STR;
+        save[fd] = ft_strjoin_free(save[fd], gnl.buff, 1);
+    }
+    return (-1);
 }
